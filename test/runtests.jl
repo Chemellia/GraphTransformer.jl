@@ -1,6 +1,9 @@
-using GraphTransformer
 using Test
+using GraphTransformer
+using GeometricFlux
+using LightGraphs
 
 @testset "GraphTransformer.jl" begin
-    # Write your tests here.
+    include("./multi_head_attn.jl")
+    include("./graph_transformer_layer.jl")
 end
