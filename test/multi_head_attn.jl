@@ -14,8 +14,8 @@
     edge_features = rand(out_dim, edges)   # [feature_dim, num_edges]
     graph = FeaturedGraph(graph, nf=node_features, ef=edge_features)
 
-    layer = MultiHeadAttentionLayer(in_dim, out_dim, 2)
-    output_graph = layer(graph)
-    @test size(output_graph.nf) == (out_dim, nodes) 
-    @test size(output_graph.ef) == (out_dim, edges)
+    layer = MultiHeadAttentionLayer(in_dim, out_dim ÷ num_heads, num_heads)
+    node_feats, edge_feats = layer(graph)
+    @test size(node_feats) == (out_dim, nodes) 
+    @test size(edge_feats) == (out_dim, edges)
 end

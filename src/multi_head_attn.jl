@@ -2,7 +2,8 @@ struct MultiHeadAttentionLayer{L,I,B} <: MessagePassing
     query_layer::L
     key_layer::L
     value_layer::L
-    edge_projection_layer::L 
+    edge_projection_layer::L
+    node_output_layer::L  
     in_dim::I 
     out_dim::I 
     num_heads::I 
@@ -20,12 +21,14 @@ function MultiHeadAttentionLayer(
     key_layer = Flux.Dense(in_dim, out_dim * num_heads, bias=bias, init=init)
     value_layer = Flux.Dense(in_dim, out_dim * num_heads, bias=bias, init=init)
     edge_projection_layer = Flux.Dense(in_dim, out_dim * num_heads, bias=bias, init=init)
-
+    # The final projection layer for the output of attention module 
+    node_output_layer = Flux.Dense(out_dim * num_heads, out_dim * num_heads, bias=bias, init=init)
     return MultiHeadAttentionLayer(query_layer, 
-        key_layer, 
-        value_layer, 
-        edge_projection_layer, 
-        in_dim, out_dim, num_heads, bias)
+                                    key_layer, 
+                                    value_layer, 
+                                    edge_projection_layer, 
+                                    node_output_layer, 
+                                    in_dim, out_dim, num_heads, bias)
 end 
 
 @functor MultiHeadAttentionLayer
@@ -58,12 +61,12 @@ function apply_batch_message(mha::MultiHeadAttentionLayer, i, js, X)
     n = size(scores, 1)
     alphas = Flux.softmax(reshape(view(scores, 1, :), mha.num_heads, :), dims=2)
     values = view(scores, 2:n, :) .* reshape(alphas, 1, :)
-    # Reshape values to [out_dim, num_nodes_in_neighbourhood, num_heads]
-    values = reshape(values, mha.out_dim, :, mha.num_heads)
-    # Average the heads. Value shape = [out_dim, num_nodes_in_neighbourhood]
-    values = dropdims(mean(values, dims=ndims(values)), dims=ndims(values))
+    # Reshape values to [out_dim * num_heads, num_nodes_in_neighbourhood]
+    values = reshape(values, mha.out_dim * mha.num_heads, :)
+    # Put the tensor with heads concatenated through a dense layer 
+    node_features = mha.node_output_layer(values)
     # Aggregate the values of all neighbour nodes 
-    return dropdims(sum(values, dims=ndims(values)), dims=ndims(values))
+    return dropdims(sum(node_features, dims=ndims(node_features)), dims=ndims(node_features))
 end
 
 function aggregate_neighbors(mha::MultiHeadAttentionLayer, adj, E, V)
@@ -81,16 +84,10 @@ function propagate(mha::MultiHeadAttentionLayer, fg::FeaturedGraph)
     node_feats = aggregate_neighbors(mha, adj, edge_feats, node_feats)
     # Appl transformation to edge features
     edge_feats = mha.edge_projection_layer(edge_feats)
-    # Reshape values to [out_dim, num_nodes_in_neighbourhood, num_heads]
-    edge_feats = reshape(edge_feats, mha.out_dim, :, mha.num_heads)
-    # Average the heads. Edge feature shape = [out_dim, num_nodes_in_neighbourhood]
-    edge_feats = dropdims(mean(edge_feats, dims=ndims(edge_feats)), dims=ndims(edge_feats))
-     
-    return FeaturedGraph(fg, nf=node_feats, ef=edge_feats)
+    return node_feats, edge_feats
 end
 
 function (mha::MultiHeadAttentionLayer)(graph::FeaturedGraph)
     # Multi Headed Attention over neighbours 
-    output_graph = propagate(mha, graph)
-    return output_graph
+    return propagate(mha, graph)
 end 
