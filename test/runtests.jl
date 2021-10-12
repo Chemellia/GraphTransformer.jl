@@ -1,4 +1,6 @@
 using Test
+using Flux 
+using Flux:params
 using GraphTransformer
 using GeometricFlux
 using LightGraphs

@@ -3,8 +3,9 @@ module GraphTransformer
 using Flux 
 using Flux:@functor, glorot_uniform, Zygote 
 using GeometricFlux 
-using GeometricFlux:_view
-using GraphSignals 
+using GeometricFlux:_view, edge_index_table
+using GraphSignals
+using LightGraphs:edges
 using GraphLaplacians
 using Statistics 
 
