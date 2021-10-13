@@ -70,7 +70,6 @@ end
 
 function (GTL::GraphTransformerLayer)(graph::FeaturedGraph)
     init_node_features, init_edge_features = graph.nf, graph.ef 
-
     # Propagate Multi-Head Attention 
     node_features, edge_features = GTL.attention_layer(graph)
 
