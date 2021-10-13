@@ -20,4 +20,8 @@ makedocs(;
 
 deploydocs(;
     repo="github.com/DwaraknathT/GraphTransformer.jl",
+    target="build",
+    branch="gh-pages",
+    devbranch="main",
+    push_preview=true,
 )
